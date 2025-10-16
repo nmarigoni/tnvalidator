@@ -11,61 +11,61 @@ Errors are highlighted in red: these are entries that, to my knowledge, are neve
 Warnings are highlighted in orange: these are entries that may be correct but may also indicate a mistake. Warnings are minimal and are explained below.
 
 TNValidator uses the following data sets to perform checks:
-Valid Units = All units listed in the Valid Units worksheet, includes GM units used for special transfers. Note that newly created units can be added to the Valid Units 
-Valid Clan Units - All Valid Units that belong to your Clan
-GM Units - All Valid Units that are GM (clan 263) units
-Turn Start Units - All units listed on the Clan worksheets, i.e., units that existed before the beginning of the turn (used principally for determining valid units to perform activities).
+- Valid Units = All units listed in the Valid Units worksheet, includes GM units used for special transfers. Note that newly created units can be added to the Valid Units 
+- Valid Clan Units - All Valid Units that belong to your Clan
+- GM Units - All Valid Units that are GM (clan 263) units
+- Turn Start Units - All units listed on the Clan worksheets, i.e., units that existed before the beginning of the turn (used principally for determining valid units to perform activities).
 
 TNValidator performs the following tests:
 
 ### Activity Orders ###
 
--Invalid Unit Assigned Activity
+- **Invalid Unit Assigned Activity** - 
 Checks the TRIBE column in the Tribes_Activities worksheet to determine if all activities are assigned to a Valid Unit. A failure is an error.
 
-- New Unit Assigned Activity
+- **New Unit Assigned Activity** - 
 Checks the TRIBE column in the Tribes_Activities worksheet to determine if a unit is assigned an activity that is a Valid Unit but not a Turn Start Unit. This typically identifies newly created units the user has added to the Valid Units worksheet. A failure is a warning because this is valid for some activities types, e.g., Scouting and other Warrior activities, but should be reviewed.
 
-- Activity Orders Item/Distinction Errors
+- **Activity Orders Item/Distinction Errors** - 
 Checks the ACTIVITY/ITEM/DISTINCTION columns of the Tribes_Activities worksheet to determine if all assigned activities match a combination on the Valid Activity worksheet. A failure is an error.
 
-- Activity Order Discontinuity Errors
+- **Activity Order Discontinuity Errors** - 
 Checks the TRIBE column in the Tribe_Activities worksheet to identify any circumstances where there is a discontinuous assignment of activities to the same unit, i.e., that multiple "groups" of activities are assigned to the same unit, with activities assigned to other units in between. This will cause processing errors because later groupings will overwrite existing groupings when processed. A failure is an error.
 
 ### Transfer Orders ###
-- Invalid Transfer Unit Errors
+- **Invalid Transfer Unit Errors** - 
 Checks the From and To columns of the Transfers worksheet to ensure a Valid Clan Unit is on at least one side of each transfer, i.e., that each transfer actually involves your Clain. A failure is an error.
 
-- Transfers From Non-Clan/GM Units
+- **Transfers From Non-Clan/GM Units** - 
 Checks the From column of the Transfers worksheet for transfers ordered from a unit that is not a Valid Clan Unit or GM Unit, as a player cannot order a transfer from another Clan. A failure is an error.
 
-- Transfers To Non-Clan/GM Units
+- **Transfers To Non-Clan/GM Units** - 
 Checks the To column of the Transfers worksheet for transfers ordered to a unit that is not a Valid Clan Unit or GM Unit. While external transfers to another Clan are valid, these should be checked to ensure an apparent external transfer is not a mistyped intra-Clan transfer. A failure is a warning.
 
-- Invalid Transfer Goods
+- **Invalid Transfer Goods** - 
 Checks the Item column of the Transfers worksheet to determine if all transfer orders are for an item/good type that appears in the Goods column of the Valid Goods worksheet. To catch errors such as unnecessary/required pluralization. A failure is an error.
 
 ### Movement and Scouting ###
-- Movement Unit Errors
+- **Movement Unit Errors** - 
 Checks the TRIBE column of the Tribe_Movement worksheet to determine if all units assigned scouting orders are Valid Units. A failure is an error.
 
-- Scouting Unit Errors
+- **Scouting Unit Errors** - 
 Checks the TRIBE column of the Scout_Movement worksheet to determine if all units assigned scouting orders are Valid Units. A failure is an error.
 
 ### Skill and Research Orders ###
-- Skill Attempt Unit Errors
+- **Skill Attempt Unit Errors** - 
 Checks the TRIBE column of the Skill_Attempts worksheet to determine if all units assigned skill attempt orders are both Valid Units and are Tribe-type Units rather than Subunits. A failure is an error.
 
-- Tribes Assigned Excess Skill Attempts Errors
+- **Tribes Assigned Excess Skill Attempts Errors** - 
 Checks the TRIBE column of the Skill_Attempts worksheet to determine if any unit is assigned more than three skill attempts. A failure is an error.
 
-- Duplicate Tribe/Skill Attempts Errors
+- **Duplicate Tribe/Skill Attempts Errors** - 
 Checks the TRIBE and TOPIC columns of the Skill_Attempts worksheet to determine if any unit has been assigned the same skill attempt topic more than once. A failure is an error.
 
-- Duplicate Skill Attempt Priority Errors
+- **Duplicate Skill Attempt Priority Errors** - 
 Checks the TRIBE and ORDER columns of the Skill_Attempts worksheet to determine if any unit has been assigned more than one skill attempt with the same order number/priority. A failure is an error.
 
-- Research Attempt Unit Errors
+- **Research Attempt Unit Errors** - 
 Checks the TRIBE column of the Research_Attempts worksheet to determine if all units assigned research attempt orders are both Valid Units and are Tribe-type Units rather than Subunits. A failure is an error.
 
 Installation:
