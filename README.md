@@ -6,6 +6,8 @@ What does TNValidator actually do?
 
 TNValidator will read a selected auto orders spreadsheet and generate a report identifying common data entry errors in various aspect of turn sheet. TNValidator is read only. It does not make any network connections and does not write any files to disk. The TN Orders file cannot be open in excel (or any other application) to validate.
 
+![screenshot showing example report from application, displaying an expandable tree structure with categories of errors, color-coded by error type](https://github.com/nmarigoni/tnvalidator/blob/main/example-report.png?raw=true)
+
 Errors are highlighted in red: these are entries that, to my knowledge, are never correct and will result in errors, failure of orders to process, and possibly emails from the GM.
 
 Warnings are highlighted in orange: these are entries that may be correct but may also indicate a mistake. Warnings are minimal and are explained below.
