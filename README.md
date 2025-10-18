@@ -12,6 +12,20 @@ Errors are highlighted in red: these are entries that, to my knowledge, are neve
 
 Warnings are highlighted in orange: these are entries that may be correct but may also indicate a mistake. Warnings are minimal and are explained below.
 
+Installation:
+If using the packaged Windows executable, no installation is needed, just download the .exe and run.
+
+If using the Python script, the only dependency you should need to install is openpyxl. All other libraries should be included in a typical Python install (at least on windows). TNValidator has been tested with Python 3.13 on Windows 11.
+
+Usage Tips:
+- Units created or converted through GM actions on the turn being evaluated can be added to the Valid Units worksheet to reduce false positive on errors. Adding units to Valid Units does not, to the best of my knowledge, impact the processing of orders in any way, and is recommended in other player aids to permit data validation when entering orders.
+
+- There is a checkbox to have the report generated with a larger font (size 12 instead of size 10). Check the box before selecting the file to validate. The window can also be resized.
+
+Contact via Discord with any questions.
+
+# Functionality #
+
 TNValidator uses the following data sets to perform checks:
 - Valid Units = All units listed in the Valid Units worksheet, includes GM units used for special transfers. Note that newly created units can be added to the Valid Units 
 - Valid Clan Units - All Valid Units that belong to your Clan
@@ -69,16 +83,3 @@ Checks the TRIBE and ORDER columns of the Skill_Attempts worksheet to determine 
 
 - **Research Attempt Unit Errors** - 
 Checks the TRIBE column of the Research_Attempts worksheet to determine if all units assigned research attempt orders are both Valid Units and are Tribe-type Units rather than Subunits. A failure is an error.
-
-Installation:
-If using the packaged Windows executable, no installation is needed, just download the .exe and run.
-
-If using the Python script, the only dependency you should need to install is openpyxl. All other libraries should be included in a typical Python install (at least on windows). TNValidator has been tested with Python 3.13 on Windows 11.
-
-Usage Tips:
-- Units created or converted through GM actions on the turn being evaluated can be added to the Valid Units worksheet to reduce false positive on errors. Adding units to Valid Units does not, to the best of my knowledge, impact the processing of orders in any way, and is recommended in other player aids to permit data validation when entering orders.
-
-- There is a checkbox to have the report generated with a larger font (size 12 instead of size 10). Check the box before selecting the file to validate. The window can also be resized.
-
-Contact via Discord with any questions.
-
