@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 
 #Changelog
+#Release R2 - November 1, 2025
+# - Fixed data references for revisions to 904-05+ auto orders sheet
+
 #Release 1 - October 16, 2025
 # - Made windows resizable
 # - Added larger font option
@@ -107,10 +110,10 @@ def processOrdersXLSX(path, reportData):
         return None
 
     #load relevant columns/triples into data structure
-    reportData["clanUnits"] = parseCol(clanSheet,1)
-    reportData["actUnits"] = parseCol(actSheet,1)
-    reportData["movUnits"] = parseCol(movSheet,1)
-    reportData["sctUnits"] = parseCol(scoSheet,1)
+    reportData["clanUnits"] = parseCol(clanSheet,2)
+    reportData["actUnits"] = parseCol(actSheet,2)
+    reportData["movUnits"] = parseCol(movSheet,2)
+    reportData["sctUnits"] = parseCol(scoSheet,2)
     reportData["sklUnits"] = parseCol(sklSheet,1)
     reportData["resUnits"] = parseCol(resSheet,1)
     reportData["xfrGoods"] = parseCol(xfrSheet,3)
@@ -119,7 +122,7 @@ def processOrdersXLSX(path, reportData):
     reportData["validGoods"] = parseCol(vgSheet,1)
     reportData["validUnits"] = parseCol(vuSheet,1)
     reportData["validActs"] = parseTriple(vaSheet,1)
-    reportData["clanActs"] = parseTriple(actSheet,2)
+    reportData["clanActs"] = parseTriple(actSheet,3)
     reportData["skillAttempts"] = parseTriple(sklSheet,1)
     
     orders.close()
@@ -509,6 +512,7 @@ root.resizable(True, True)
 root.geometry('600x200')
 
 tk.Label(text="TN Order Validator by Clan 293", font=("Arial", 12, "bold")).pack()
+tk.Label(text="Release R2, 2025-11-01", font=("Arial", 10, "bold")).pack()
 
 #Font doodling
 checkVar = tk.IntVar()
