@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 
 #Changelog
+
+#Release R3.1 - April 22, 2026
+# - Fix bug in parsing scouting reports for TN3.1 spreadsheets
+
 #Release R3 - April 11, 2026
 # - Added TN3.1 Support
 # - New Tests:
@@ -244,8 +248,8 @@ def select_file():
         clanTransfers = parseCols(transferSheet,1,5)
         validGoods = parseCols(vgSheet,1,1)
         clanUnits = parseCols(clanSheet,1,14)
+        clanScouting = parseCols(scoutSheet,1,4)
         
-
     #Separate GM and Clan units from Valid Units
     clanNumber = str(clanUnitList[0][1:4])
     validClanUnits = []
@@ -324,7 +328,7 @@ def select_file():
     assignedScouts = []
     for i in range(len(clanScouting)):
         if any(x is not None for x in clanScouting[i][1:4]):
-            assignedScouts.append(str(clanScouting[i][0].upper()))  
+            assignedScouts.append(str(clanScouting[i][0]).upper())  
     
     for i in range(len(assignedScouts)):
         if assignedScouts[i] in emptyUnits:
@@ -712,7 +716,7 @@ root.resizable(True, True)
 root.geometry('600x200')
 
 tk.Label(text="TN Order Validator by Clan 293", font=("Arial", 12, "bold")).pack()
-tk.Label(text="Release R3, 2026-04-11", font=("Arial", 10, "bold")).pack()
+tk.Label(text="Release R3.1, 2026-04-22", font=("Arial", 10, "bold")).pack()
 
 #Font doodling
 checkVar = tk.IntVar()
