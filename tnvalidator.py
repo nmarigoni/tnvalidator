@@ -2,8 +2,21 @@
 
 #Changelog
 
+#Release R4 - June 11, 2026
+# - Cleaned up output to declutter, consolidate reporting of passed tests
+# - Fixed display/reporting bug in test for scouting orders assigned to empty units
+# - Changed parser to read cached computed values for cells with formulae rather than formula text string
+# - New Tests:
+#   - Check for multiple units with same GT assigned to herding activity
+#   - Check for non-uppercase grid designation in GOTO movement Hex targets
+#   - Check for non-numeric characters/strings in Quantity Field for Transfers
+# - Revised Tests:
+#   - Updated check for valid units assigned activities to check whether activities assigned to newly created units are
+#       warrior activities (Defence, Suppression, Security, Scouting). Updated to throw error for non-warrior activities,
+#       do not flag warrior activities.
+
 #Release R3.1 - April 22, 2026
-# - Fix bug in parsing scouting reports for TN3.1 spreadsheets
+# - Fix bug in parsing scouting orders for TN3.1 spreadsheets
 
 #Release R3 - April 11, 2026
 # - Added TN3.1 Support
@@ -114,7 +127,8 @@ def checkValidList(testList, validList):
 def processOrdersXLSX(path):
     
     try:
-        orders = openpyxl.load_workbook(path)
+        orders = openpyxl.load_workbook(path, data_only=True)
+        #orders = openpyxl.load_workbook(path)
     except:
         showerror("File Input Error", "Could not open file, may be open or in use.")
         return None
@@ -154,7 +168,6 @@ def processOrdersXLSX(path):
     else:
         showerror("File Input Error", "Unsupported Game Version")
         gameVersion = None
-
 
     orders.close()
  
@@ -226,13 +239,14 @@ def select_file():
         skillUnitList = parseCols(skillSheet,1,1)
         researchUnitList = parseCols(researchSheet,1,1)
         validUnits = parseCols(vuSheet,1,1)
-        skillAttemptsFull = parseCols(skillSheet,1,3)
+        skillAttempts = parseCols(skillSheet,1,3)
         clanActivities = parseCols(activitySheet,2,7)
         validActivities = parseCols(vaSheet,1,3)
         clanTransfers = parseCols(transferSheet,1,5)
         validGoods = parseCols(vgSheet,1,1)
         clanUnits = parseCols(clanSheet,2,14)
-        clanScouting = parseCols(scoutSheet,2,4)
+        clanMovement = parseCols(moveSheet,2,5)
+        clanScouting = parseCols(scoutSheet,2,5)
 
     if gameVersion == "TN3.1":
         clanUnitList = parseCols(clanSheet,1,1)
@@ -242,13 +256,14 @@ def select_file():
         skillUnitList = parseCols(skillSheet,1,1)
         researchUnitList = parseCols(researchSheet,1,1)
         validUnits = parseCols(vuSheet,1,1)
-        skillAttemptsFull = parseCols(skillSheet,1,3)
+        skillAttempts = parseCols(skillSheet,1,3)
         clanActivities = parseCols(activitySheet,1,7)
         validActivities = parseColsUpper(vaSheet,1,3)
         clanTransfers = parseCols(transferSheet,1,5)
         validGoods = parseCols(vgSheet,1,1)
         clanUnits = parseCols(clanSheet,1,14)
-        clanScouting = parseCols(scoutSheet,1,4)
+        clanMovement = parseCols(moveSheet,1,5)
+        clanScouting = parseCols(scoutSheet,1,5)
         
     #Separate GM and Clan units from Valid Units
     clanNumber = str(clanUnitList[0][1:4])
@@ -284,40 +299,53 @@ def select_file():
         treeview.insert(guRoot,tk.END,text=str(validGMUnits[i]))
 
     #create organizational root
-    actRoot = treeview.insert("",tk.END,text="Activity Orders")
-    xfrRoot = treeview.insert("",tk.END,text="Transfer Orders")
-    movRoot = treeview.insert("",tk.END,text="Movement and Scouting Orders")
-    lrnRoot = treeview.insert("",tk.END,text="Skill and Research Orders")
+    actRoot = treeview.insert("",tk.END,text="Activity Orders",tags="pass")
+    xfrRoot = treeview.insert("",tk.END,text="Transfer Orders",tags="pass")
+    movRoot = treeview.insert("",tk.END,text="Movement and Scouting Orders",tags="pass")
+    lrnRoot = treeview.insert("",tk.END,text="Skill and Research Orders",tags="pass")
     
     ### Movement and Scouting Tests
+    passRoot = treeview.insert(movRoot,tk.END,text="Tests Passed",tags="pass")
     
     #Check for Invalid Units Assigned Movement Orders 
-    errRoot = treeview.insert(movRoot,tk.END,text="Movement Unit Errors", open=True)
     vErrors = checkValidList(movementUnitList, validClanUnits)
-
-    if len(vErrors) == 0:
-        treeview.insert(errRoot,tk.END,text="No Invalid Units Assigned Movement Orders", tags="pass")
-    else:
+    if vErrors:
+        errRoot = treeview.insert(movRoot,0,text="Invalid Units Assigned Movement Orders",tags="error",open=True)
         treeview.item(movRoot, tags="error")
-        treeview.item(errRoot, tags="error")
         for i in range(len(vErrors)):
             errorText = "Invalid Unit " + str(vErrors[i][1]) + " assigned movement order on Row " + str(vErrors[i][0])
-            treeview.insert(errRoot,tk.END,text=errorText)
-
-    #Check for Invalid Units Assigned Scouting Orders
-    errRoot = treeview.insert(movRoot,tk.END,text="Scouting Unit Errors", open=True)
-    vErrors = checkValidList(scoutUnitList, validClanUnits)
-    if len(vErrors) == 0:
-        treeview.insert(errRoot, tk.END, text="No Invalid Units Assigned Scouting Orders", tags="pass")
+            treeview.insert(errRoot,0,text=errorText)
     else:
+        treeview.insert(passRoot,tk.END,text="No Invalid Units Assigned Movement Orders")
+    
+    #Check for GOTO order where Grid ID is not all uppercase
+    vErrors = []
+    for i in range(len(clanMovement)):
+        if str(clanMovement[i][4]).upper() == "GOTO" and str(clanMovement[i][3]).isupper() is False:
+            errorData = [i+2, clanMovement[i][0], clanMovement[i][3]]
+            vErrors.append(errorData)
+    
+    if vErrors:
+        errRoot = treeview.insert(movRoot,0,text="GOTO Orders With Non-Uppercase Hex Target",tags="error",open=True)
         treeview.item(movRoot, tags="error")
-        treeview.item(errRoot, tags="error")
+        for i in range(len(vErrors)):
+            errorText = "Unit " + str(vErrors[i][1]) + " assigned GOTO order with non-uppercase Hex target " + str(vErrors[i][2]) + " on Row " + str(vErrors[i][0])
+            treeview.insert(errRoot,0,text=errorText)
+    else:
+        treeview.insert(passRoot,tk.END,text="No GOTO Orders With Non-Uppercase Hex Target")
+    
+    #Check for Invalid Units Assigned Scouting Orders
+    vErrors = checkValidList(scoutUnitList, validClanUnits)
+    if vErrors:
+        errRoot = treeview.insert(movRoot,0,text="Invalid Units Assigned Scouting Orders",tags="error",open=True)
+        treeview.item(movRoot, tags="error")
         for i in range(len(vErrors)):
             errorText = "Invalid Unit " + str(vErrors[i][1]) + " assigned scouting order on Row " + str(vErrors[i][0])
             treeview.insert(errRoot, tk.END, text=errorText)
-
+    else:
+        treeview.insert(passRoot, tk.END, text="No Invalid Units Assigned Scouting Orders")
+    
     #Check for scouting missions assigned to unit that was empty at turn start (likely absorbed or disbanded)
-    errRoot = treeview.insert(movRoot, tk.END, text="Empty Unit Scouting Errors", open=True)
     vErrors = []
     emptyUnits = []
     for i in range(len(clanUnits)):
@@ -328,26 +356,29 @@ def select_file():
     assignedScouts = []
     for i in range(len(clanScouting)):
         if any(x is not None for x in clanScouting[i][1:4]):
-            assignedScouts.append(str(clanScouting[i][0]).upper())  
+            scoutingData = [i+2, str(clanScouting[i][0]).upper()]
+            assignedScouts.append(scoutingData)  
     
     for i in range(len(assignedScouts)):
-        if assignedScouts[i] in emptyUnits:
-            errorData = (i+2, clanScouting[i][0])
-            vErrors.append(errorData)
+        if assignedScouts[i][1] in emptyUnits:
+            vErrors.append(assignedScouts[i])
     
-    if len(vErrors) == 0:
-        treeview.insert(errRoot, tk.END, text="No Scouting Missions Assigned to Empty Units", tags="pass")
-
-    else:
+    if vErrors:
+        errRoot = treeview.insert(movRoot, 0, text="Scouting Missions Assigned to Units That Began Turn Empty", tags="error", open=True)
         treeview.item(movRoot, tags="error")
-        treeview.item(errRoot, tags="error")
         for i in range(len(vErrors)):
-            errorText = "Likely Error: Unit " + str(vErrors[i][1]) + " was empty at turn start and is assigned a scouting mission on row " + str(vErrors[i][0])
+            errorText = "Unit " + str(vErrors[i][1]).lower() + " was empty at turn start and is assigned a scouting mission on row " + str(vErrors[i][0])
             treeview.insert(errRoot, tk.END, text=errorText)
-
-   # Check for Scouting Missions that exceed available warriors post-transfer
+    else:
+        treeview.insert(passRoot, tk.END, text="No Scouting Missions Assigned to Units That Began Turn Empty")
+    
+    # Check for otherwise complete scouting order (i.e., scouts, horses, mission defined) with EMPTY in Movement1
+    
+    # Check for Scouting Missions that exceed available warriors post-transfer
     ## This needs to be finished
-    errRoot = treeview.insert(movRoot, tk.END, text="Inufficient Warriors Scouting Errors", open=True)
+      
+    """
+    errRoot = treeview.insert(movRoot, tk.END, text="Isnufficient Warriors Scouting Errors", open=True)
     vErrors = {}
 
     #create dict of how many warriors are in each clan unit post transfer
@@ -382,23 +413,26 @@ def select_file():
             if value > unitWarriors[key]:
                 vErrors[key] = value
         
-
+    """
     ### Skill and Research Tests
-
+    passRoot = treeview.insert(lrnRoot,tk.END,text="Tests Passed",tags="pass")
+    
     #Check for Invalid Units Assigned Skill Attempts
-    errRoot = treeview.insert(lrnRoot,tk.END,text="Skill Attempt Unit Errors", open=True)
     vErrors = checkValidList(skillUnitList, validClanTribes)
-    if len(vErrors) == 0:
-        treeview.insert(errRoot, tk.END, text="No Invalid Units Assigned Skill Attempts", tags="pass")
-    else:
+    if vErrors:
+        errRoot = treeview.insert(lrnRoot,0,text="Invalid Units Assigned Skill Attempts", tags="error",open=True)
         treeview.item(lrnRoot, tags="error")
-        treeview.item(errRoot, tags="error")
         for i in range(len(vErrors)):
             errorText = "Invalid Unit " + str(vErrors[i][1]) + " assigned skill attempt on Row " + str(vErrors[i][0])
-            treeview.insert(errRoot, tk.END, text=errorText)
+            treeview.insert(errRoot, 0, text=errorText)
+    else:
+        treeview.insert(passRoot, tk.END, text="No Invalid Units Assigned Skill Attempts")
 
+    #Add - Check for Priority 3 (Teacher) Skill attempt assigned to non-Group A skill
+
+    #Add - Check for Priority 3 (Teacher) skill attempt assigned to skill level beyond 7
+    
     #check for Tribes assigned more than three skill attempts
-    errRoot = treeview.insert(lrnRoot,tk.END,text="Tribes Assigned Excess Skill Attempts Errors", open=True)
     skillAttemptTrack = {}
     vErrors = {}
     for i in skillUnitList:
@@ -411,122 +445,143 @@ def select_file():
         if value > 3:
             vErrors[key] = value
 
-    if len(vErrors) == 0:
-        treeview.insert(errRoot, tk.END, text="No Tribe Assigned More Than Three Skill Attempts", tags="pass")
-    else:
+    if vErrors:
+        errRoot = treeview.insert(lrnRoot,0,text="Tribes Assigned More Than Three Skill Attempts",tags="error", open=True)
         treeview.item(lrnRoot, tags="error")
-        treeview.item(errRoot, tags="error")
         for key, value in vErrors.items():
             errorText = "Tribe " + str(key) + " assigned " + str(value) + " skill attempts"
             treeview.insert(errRoot, tk.END, text=errorText)
+    else:
+        treeview.insert(passRoot, tk.END, text="No Tribe Assigned More Than Three Skill Attempts")
     
     #check for duplicate Tribe/Skill attempts
-    errRoot = treeview.insert(lrnRoot,tk.END,text="Duplicate Tribe/Skill Attempts Errors", open=True)
     skillAttemptTrack = []
     vErrors = []
-    for i in range(len(skillAttemptsFull)):
-        checkAttempt = [skillAttemptsFull[i][0], str(skillAttemptsFull[i][2]).upper()]
+    for i in range(len(skillAttempts)):
+        checkAttempt = [skillAttempts[i][0], str(skillAttempts[i][2]).upper()]
         if checkAttempt in skillAttemptTrack:
             vErrors.append(checkAttempt)
         else:
             skillAttemptTrack.append(checkAttempt)
-    if len(vErrors) == 0:
-        treeview.insert(errRoot, tk.END, text="No Tribe Attempting Duplicate Skills", tags="pass")
-    else:
+    if vErrors:
+        errRoot = treeview.insert(lrnRoot,0,text="Tribes Attempting Duplicate Skills", tags="error", open=True)
         treeview.item(lrnRoot, tags="error")
-        treeview.item(errRoot, tags="error")
         for i in range(len(vErrors)):
-            errorText = "Tribe " + str(vErrors[i][0]) + " duplicate attempts for skill " + str(vErrors[i][1]) 
+            errorText = "Tribe " + str(vErrors[i][0]) + " attempting duplicate skill " + str(vErrors[i][1]) 
             treeview.insert(errRoot, tk.END, text=errorText)
+    else:
+        treeview.insert(passRoot, tk.END, text="No Tribe Attempting Duplicate Skills")
 
     #check for skill attempts with same priority for Tribe
-    errRoot = treeview.insert(lrnRoot,tk.END,text="Duplicate Skill Attempt Priority Errors", open=True)
     skillAttemptTrack = []
     vErrors = []
-    for i in range(len(skillAttemptsFull)):
-        checkAttempt = [skillAttemptsFull[i][0], skillAttemptsFull[i][1]]
+
+    for i in range(len(skillAttempts)):
+        checkAttempt = [skillAttempts[i][0], skillAttempts[i][1]]
         if checkAttempt in skillAttemptTrack:
             vErrors.append(checkAttempt)
         else:
             skillAttemptTrack.append(checkAttempt)
-    if len(vErrors) == 0:
-        treeview.insert(errRoot, tk.END, text="No Tribe Attempting Skills At Same Priority", tags="pass")
-    else:
+    if vErrors:
+        errRoot = treeview.insert(lrnRoot,0,text="Tribes Attempting Skills at Same Priority", tags="error", open=True)
         treeview.item(lrnRoot, tags="error")
-        treeview.item(errRoot, tags="error")
         for i in range(len(vErrors)):
             errorText = "Tribe " + str(vErrors[i][0]) + " attempting multiple skills at priority " + str(vErrors[i][1]) 
             treeview.insert(errRoot, tk.END, text=errorText)
-        
-    #Check for Invalid Units Assigned Research Attempts
-    errRoot = treeview.insert(lrnRoot,tk.END,text="Research Attempt Unit Errors", open=True)
-    vErrors = checkValidList(researchUnitList, validClanTribes)
-
-    if len(vErrors) == 0:
-        treeview.insert(errRoot, tk.END, text="No Invalid Units Assigned Research Attempts", tags="pass")
     else:
+        treeview.insert(passRoot, tk.END, text="No Tribe Attempting Skills At Same Priority")
+
+    #Check for Invalid Units Assigned Research Attempts
+    vErrors = checkValidList(researchUnitList, validClanTribes)
+    if vErrors:
+        errRoot = treeview.insert(lrnRoot,0,text="Invalid Units Assigned Research Attempts", tags="error", open=True)
         treeview.item(lrnRoot, tags="error")
-        treeview.item(errRoot, tags="error")
         for i in range(len(vErrors)):
             errorText = "Invalid Unit " + str(vErrors[i][1]) + " assigned research attempt on Row " + str(vErrors[i][0])
             treeview.insert(errRoot, tk.END, text=errorText)
-
-    ### Activity Tests
-    #Check for Invalid Units Assigned Activities
-    actUnitRoot = treeview.insert(actRoot,tk.END,text="Activity Orders Unit Issue", open=True)
+            #DEBUG CODE
+            #debugText = "Data type: " + str(type((vErrors[i][1])))
+            #treeview.insert(errRoot, tk.END, text=debugText)
+            #codes = [str(ord(char)) for char in str(vErrors[i][1])]
+            #debugText = "Character Codes: " + " ".join(codes)
+            #treeview.insert(errRoot, tk.END, text=debugText)
+    else:
+        treeview.insert(passRoot, tk.END, text="No Invalid Units Assigned Research Attempts")
     
+    ### Activity Tests
+    passRoot = treeview.insert(actRoot,tk.END,text="Tests Passed",tags="pass")
+    
+    #Check for Invalid Units Assigned Activities
+  
     #Check clan tab first because new units ordinariliy should not perform activities. If unit is on valid list, give warning (converted unit, scouting orders). If not on valid list, give error.
-    errRoot = treeview.insert(actUnitRoot,tk.END,text="Invalid Unit Assigned Activity [Error]", open=True)
-    warnRoot = treeview.insert(actUnitRoot,tk.END,text="New Unit Assigned Activity [Warning/Informational]", open=True)
     vErrors = checkValidList(activityUnitList, clanUnitList)
-    errCount = 0
-    warnCount = 0
+    newUnitErrors = []
+    invalidUnitErrors = []
+    validNewUnitActivities = ["DEFENCE", "SCOUTING", "SUPPRESSION", "SECURITY"]
 
-    if len(vErrors) != 0:
+    if vErrors:
         for i in range(len(vErrors)):
             if vErrors[i][1] in validClanUnits:
-                warnCount += 1
-                errorText = "New Unit " + str(vErrors[i][1]) + " assigned activity order on Row " + str(vErrors[i][0])
-                treeview.insert(warnRoot, tk.END, text=errorText)
+                adjustedRowNumber = int(vErrors[i][0])-2
+                newUnitActivity = clanActivities[adjustedRowNumber][1]
+                if newUnitActivity not in validNewUnitActivities:
+                    errorData = [vErrors[i][0], vErrors[i][1], newUnitActivity]
+                    newUnitErrors.append(errorData)
             else:
-                errCount += 1
-                errorText = "Invalid Unit " + str(vErrors[i][1]) + " assigned activity order on Row " + str(vErrors[i][0])
-                treeview.insert(errRoot, tk.END, text=errorText)
-    if errCount == 0:
-        treeview.insert(errRoot, tk.END, text="No Invalid Units Assigned Activity Orders", tags="pass")
-    else:
-        treeview.item(actRoot, tags="error")
-        treeview.item(errRoot, tags="error")
-    if warnCount == 0:
-        treeview.insert(warnRoot, tk.END, text="No New Units Assigned Activity Orders", tags="pass")
-    else:
-        if treeview.item(actRoot, option="tags") != ("error",):
-            treeview.item(actRoot, tags="warning")
-        treeview.item(warnRoot, tags="warning")
-   
-    #Check for invalid Activities
-    errRoot = treeview.insert(actRoot,tk.END, text="Activity Orders Item/Distinction Errors", open=True)
-    vErrors = []
+                invalidUnitErrors.append(vErrors[i])
 
+    if newUnitErrors:
+        errRoot = treeview.insert(actRoot,0,text="New Unit Assigned Invalid (Non-Warrior) Activity Orders", tags="error", open=True)
+        treeview.item(actRoot, tags="error")
+        for i in range(len(newUnitErrors)):
+            errorText = "Newly Created Unit " + str(newUnitErrors[i][1]) + " assigned invalid activity " + str(newUnitErrors[i][2]) + " on Row " + str(newUnitErrors[i][0])
+            treeview.insert(errRoot, tk.END, text=errorText)
+    else:
+        treeview.insert(passRoot, tk.END, text="No New Units Assigned Invalid Activity Orders")
+
+    if invalidUnitErrors:
+        errRoot = treeview.insert(actRoot,0,text="Invalid Unit Assigned Activity Orders", tags="error", open=True)
+        treeview.item(actRoot, tags="error")
+        for i in range(len(invalidUnitErrors)):
+            errorText = "Invalid Unit " + str(invalidUnitErrors[i][1]) + " assigned activity on Row " + str(invalidUnitErrors[i][0])
+            treeview.insert(errRoot, tk.END, text=errorText)
+    else:
+        treeview.insert(passRoot, tk.END, text="No Invalid Units Assigned Activity Orders")
+
+    #Check for invalid Activities
+    vErrors = []
     for i in range(len(clanActivities)):
+        
         casedActivity = [str(clanActivities[i][1]).upper(), str(clanActivities[i][2]).upper(), str(clanActivities[i][3]).upper()]
         
-        if casedActivity not in validActivities:     
+        if clanActivities[i][2] is None or clanActivities[i][3] is None:
+            if clanActivities[i][2] is None:
+                item = "[Item Blank]"
+            else:
+                item = clanActivities[i][2]
+
+            if clanActivities[i][3] is None:
+                distinction = "[Distinction Blank]"
+            else:
+                distinction = clanActivities[i][3]
+
+            errorData = [i+2, clanActivities[i][1], item, distinction]
+            vErrors.append(errorData)
+              
+        elif casedActivity not in validActivities:     
             errorData = [i+2, clanActivities[i][1], clanActivities[i][2], clanActivities[i][3]]
             vErrors.append(errorData)
 
-    if len(vErrors) == 0:
-        treeview.insert(errRoot, tk.END, text="No Activity Item/Distinction Errors Found", tags="pass")
-    else:
+    if vErrors:
+        errRoot = treeview.insert(actRoot,0, text="Invalid Activity/Item/Distinction Groupings", tags="error", open=True)
         treeview.item(actRoot, tags="error")
-        treeview.item(errRoot, tags="error")
         for i in range(len(vErrors)):
-            errorText = "Invalid Item/Distinction on Row " + str(vErrors[i][0]) + ", Activity " + str(vErrors[i][1]) + ": " + str(vErrors[i][2]) + " / " + str(vErrors[i][3])
+            errorText = "Invalid Activity/Item/Distinction on Row " + str(vErrors[i][0]) + ": " + str(vErrors[i][1]) + " / " + str(vErrors[i][2]) + " / " + str(vErrors[i][3])
             treeview.insert(errRoot, tk.END, text=errorText)
-
+    else:
+        treeview.insert(passRoot, tk.END, text="No Invalid Activity/Item/Distinction Groupings")
+    
     #check for Activity Discontinuity
-    errRoot = treeview.insert(actRoot,tk.END,text="Activity Order Discontinuity Errors", open=True)
-
     actAssignedUnits = []
     vErrors = []
     prevActUnit = None
@@ -546,17 +601,16 @@ def select_file():
                 errorData = (i+2, curUnit)
                 vErrors.append(errorData)
     
-    if len(vErrors) == 0:
-        treeview.insert(errRoot, tk.END, text="No Activity Order Discontinuity Detected", tags="pass")
-    else:
+    if vErrors:
+        errRoot = treeview.insert(actRoot,0,text="Fragmented Activity Orders", tags="error", open=True)
         treeview.item(actRoot, tags="error")
-        treeview.item(errRoot, tags="error")
         for i in range(len(vErrors)):
             errorText = "Unit " + str(vErrors[i][1]) + " assigned non-contiguous activity order on Row " + str(vErrors[i][0])
             treeview.insert(errRoot, tk.END, text=errorText)
+    else:
+        treeview.insert(passRoot, tk.END, text="No Fragmented Activity Orders")
 
     #check for Activities assigned no workers
-    errRoot = treeview.insert(actRoot, tk.END, text="Activity Null Worker Errors", open=True)
     vErrors = []
     for i in range(len(clanActivities)):
         try:
@@ -576,17 +630,53 @@ def select_file():
             errorData = (i+2, clanActivities[i][0], clanActivities[i][1])
             vErrors.append(errorData)
     
-    if len(vErrors) == 0:
-        treeview.insert(errRoot, tk.END, text = "No Activities With Fewer than 1 Worker Assigned", tags="pass")
-    else:
+    if vErrors:
+        errRoot = treeview.insert(actRoot, 0, text="Activity Orders With Fewer than 1 Worker Assigned", tags="error", open=True)
         treeview.item(actRoot, tags="error")
-        treeview.item(errRoot, tags="error")
         for i in range(len(vErrors)):
             errorText = "Fewer than 1 Worker Assigned to Unit " + str(vErrors[i][1]).lower() + " Activity " + str(vErrors[i][2]) + " on Row " + str(vErrors[i][0])
             treeview.insert(errRoot, tk.END, text=errorText)
+    else:
+        treeview.insert(passRoot, tk.END, text = "No Activity Orders With Fewer than 1 Worker Assigned")
 
+    #check for multiple units in same GT assigned to herding
+    vErrors = []
+    herdingUnits = []
+    herdedUnits = {}
+    unitGTs = {}
+
+    for i in range(len(clanUnits)):
+        unit = str(clanUnits[i][0]).upper()
+        gt = str(clanUnits[i][1]).upper()
+        unitGTs[unit] = gt
+    
+    for i in range(len(clanActivities)):
+        if str(clanActivities[i][1]).upper() == "HERDING":
+            herdingUnits.append(str(clanActivities[i][0]).upper())
+
+    for i in range(len(herdingUnits)): #walk through all units assigned herding activities
+        herdingUnit = herdingUnits[i] 
+        if herdingUnit in unitGTs: #doing this to avoid potential errors
+            herdedUnit = str(unitGTs[herdingUnit]).upper() #set the "herded units" for the herding activity at issue to the GT of the herding unit
+
+            if herdedUnit in herdedUnits: # if the herded unit is already a key in the herded units dict
+                existingHerder = herdedUnits[herdedUnit] # identify existing herder
+                errorData = [herdingUnit.lower(), herdedUnit.lower(), existingHerder.lower()] # add herding unit, herded unit, and existing herder to errors
+                vErrors.append(errorData)
+            else:
+                herdedUnits[herdedUnit] = herdingUnit # otherwise add herded unit as key in herded unit with value of herder
+
+    if vErrors:
+        errRoot = treeview.insert(actRoot, 0, text="Duplicative Herding Activities For Same Goods Tribe", tags="error", open=True)
+        treeview.item(actRoot, tags="error")
+
+        for i in range(len(vErrors)):
+            errorText = "Unit " + str(vErrors[i][0]) + " assigned to herd animals of GT " + str(vErrors[i][1]) + " that Unit " + str(vErrors[i][2]) + " is already herding."
+            treeview.insert(errRoot, tk.END, text=errorText)
+    else:
+        treeview.insert(passRoot, tk.END, text="No Duplicative Herding Activities For Same Goods Tribe")
+    
     #check for Activities assigned to Unit that was Empty at start of turn (likely absorbed our disbanded but persisting)
-    errRoot = treeview.insert(actRoot, tk.END, text="Empty Unit Activity Errors", open=True)
     vErrors = []
     emptyUnits = []
     for i in range(len(clanUnits)):
@@ -600,18 +690,20 @@ def select_file():
             errorData = (i+2, clanActivities[i][0], clanActivities[i][1])
             vErrors.append(errorData)
     
-    if len(vErrors) == 0:
-        treeview.insert(errRoot, tk.END, text="No Activities Assigned to Empty Units", tags="pass")
-
-    else:
+    if vErrors:
+        errRoot = treeview.insert(actRoot, 0, text="Activities Assigned to Units That Began Turn Empty", tags="error", open=True)
         treeview.item(actRoot, tags="error")
-        treeview.item(errRoot, tags="error")
+
         for i in range(len(vErrors)):
-            errorText = "Likely Error: Unit " + str(vErrors[i][1]) + " was empty at turn start and is assigned activity " + str(vErrors[i][2]) + " on row " + str(vErrors[i][0])
+            errorText = "Unit " + str(vErrors[i][1]) + " was empty at turn start and is assigned activity " + str(vErrors[i][2]) + " on row " + str(vErrors[i][0])
             treeview.insert(errRoot, tk.END, text=errorText)
-           
+    else:
+        treeview.insert(passRoot, tk.END, text="No Activities Assigned to Units That Began Turn Empty")
+
+    ##Transfer Orders
+    passRoot = treeview.insert(xfrRoot,tk.END,text="Tests Passed",tags="pass")
+    
     #check for at least one Clan unit in each transfer
-    errRoot = treeview.insert(xfrRoot,tk.END,text="Invalid Transfer Unit Errors", open=True)
     vErrors = []
     for i in range (len(clanTransfers)):
         match = None
@@ -625,17 +717,18 @@ def select_file():
             #add 2 for omitted title row and zero index conversion
             vErrors.append(i+2)
              
-    if len(vErrors) == 0:
-        treeview.insert(errRoot, tk.END, text="No Transfer Orders Without Clan Unit", tags="pass")
-    else:
+    if vErrors:
+        errRoot = treeview.insert(xfrRoot,0,text="Transfer Orders Without Clan Unit", tags="error", open=True)
         treeview.item(xfrRoot, tags="error")
-        treeview.item(errRoot, tags="error")
+
         for i in range(len(vErrors)):
             errorText = "Transfer order on Row " + str(vErrors[i]) + " has no valid Clan unit"
             treeview.insert(errRoot, tk.END, text=errorText)
+    else:
+        treeview.insert(passRoot, tk.END, text="No Transfer Orders Without Clan Unit")
 
     #check for transfers from non-Clan/GM Units (not a valid transfer order, error)
-    errRoot = treeview.insert(xfrRoot,tk.END,text="Transfers From Non-Clan/GM Units [Error]", open=True)
+
     vErrors = []
     for i in range (len(clanTransfers)):
         match = None
@@ -647,17 +740,17 @@ def select_file():
             errorData = (i+2, clanTransfers[i][0], clanTransfers[i][1])
             vErrors.append(errorData)
 
-    if len(vErrors) == 0:
-        treeview.insert(errRoot, tk.END, text="No Transfers From Non-Clan/GM Units", tags="pass")
-    else:
+    if vErrors:
+        errRoot = treeview.insert(xfrRoot,0,text="Transfers from External (Non-Clan/GM) Units", tags="error", open=True)
         treeview.item(xfrRoot, tags="error")
-        treeview.item(errRoot, tags="error")
+
         for i in range(len(vErrors)):
             errorText = "Transfer From Non-Clan/GM Unit " + str(vErrors[i][1]) + " to Unit " + str(vErrors[i][2]) + " on Row " + str(vErrors[i][0])
             treeview.insert(errRoot, tk.END, text=errorText)
+    else:   
+        treeview.insert(passRoot, tk.END, text="No Transfers from External (Non-Clan/GM) Units")
 
     #check for transfers to non-Clan Units (valid but worth reviewing for mistakes, warning)
-    errRoot = treeview.insert(xfrRoot,tk.END,text="Transfers to Non-Clan/GM Units [Warning/Informational]", open=True)
     vErrors = []
     for i in range (len(clanTransfers)):
         match = None
@@ -669,18 +762,19 @@ def select_file():
             errorData = (i+2, clanTransfers[i][0], clanTransfers[i][1])
             vErrors.append(errorData)
 
-    if len(vErrors) == 0:
-        treeview.insert(errRoot, tk.END, text="No Transfers To Non-Clan/GM Units", tags="pass")
-    else:
+    if vErrors:
+        errRoot = treeview.insert(xfrRoot,0,text="Transfers to External (Non-Clan/GM) Units [Warning Only]", tags="warning", open=True)
+
         if treeview.item(xfrRoot, option="tags") != ("error",):
             treeview.item(xfrRoot, tags="warning")
-        treeview.item(errRoot, tags="warning")
+
         for i in range(len(vErrors)):
             errorText = "Transfer To Non-Clan/GM Unit " + str(vErrors[i][2]) + " from Unit " + str(vErrors[i][1]) + " on Row " + str(vErrors[i][0])
             treeview.insert(errRoot, tk.END, text=errorText)
+    else:
+        treeview.insert(passRoot, tk.END, text="No Transfers to External (Non-Clan/GM) Units")    
 
     #check for invalid goods in transfers
-    errRoot = treeview.insert(xfrRoot,tk.END,text="Invalid Transfer Goods Errors", open=True)
     vErrors = []
     for i in range (len(clanTransfers)):
         match = None
@@ -692,14 +786,44 @@ def select_file():
             errorData = (i+2, clanTransfers[i][2])
             vErrors.append(errorData)
 
-    if len(vErrors) == 0:
-        treeview.insert(errRoot, tk.END, text="No Invalid Goods in Transfer Orders", tags="pass")
-    else:
+    if vErrors:
+        errRoot = treeview.insert(xfrRoot,0,text="Invalid Goods in Transfer Orders", tags="error", open=True)
         treeview.item(xfrRoot, tags="error")
-        treeview.item(errRoot, tags="error")
+
         for i in range(len(vErrors)):
             errorText = "Invalid Good " + str(vErrors[i][1]) + " on Row " + str(vErrors[i][0])
             treeview.insert(errRoot, tk.END, text=errorText)
+    else:
+        treeview.insert(passRoot, tk.END, text="No Invalid Goods in Transfer Orders")
+
+    # Check for transfer with blank "From" Unit (Pend this item for if parsecols is later changed not to flag an empty row where acting unit is missing)
+    # Check for transfer with blank "To" Unit
+    # Check for transfer with blank Item
+    # Check for transfer with blank Quantity
+    
+    # Check for transfer with invalid (non-numeric) quantity
+    vErrors = []
+
+    for i in range (len(clanTransfers)):
+        if not isinstance(clanTransfers[i][3], int):
+            errorData = [i+2, clanTransfers[i][3]]
+            vErrors.append(errorData)
+
+        elif str(clanTransfers[i][3]).isdigit() is False:
+            errorData = [i+2, clanTransfers[i][3]]
+            vErrors.append(errorData)
+    
+    if vErrors:
+        errRoot = treeview.insert(xfrRoot,0,text="Transfer Orders with Non-Numeric Quantity", tags="error", open=True)
+        treeview.item(xfrRoot, tags="error")
+
+        for i in range(len(vErrors)):
+            errorText = "Invalid (Non-Numeric) Characters or String in Quantity Field for Transfer on Row " + str(vErrors[i][0]) + ": " + str(vErrors[i][1])
+            treeview.insert(errRoot, tk.END, text=errorText)
+    else:
+        treeview.insert(passRoot, tk.END, text="No Transfer Orders with Non-Numeric Quantity")
+
+    # Check for transfer with blank Transfer_Timing
 
 fontsize = 10
 
@@ -713,10 +837,10 @@ def font_resize():
 root = tk.Tk()
 root.title('TNValidator')
 root.resizable(True, True)
-root.geometry('600x200')
+root.geometry('640x200')
 
 tk.Label(text="TN Order Validator by Clan 293", font=("Arial", 12, "bold")).pack()
-tk.Label(text="Release R3.1, 2026-04-22", font=("Arial", 10, "bold")).pack()
+tk.Label(text="Release R4, 2026-06-11", font=("Arial", 10, "bold")).pack()
 
 #Font doodling
 checkVar = tk.IntVar()
